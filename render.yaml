@@ -1,0 +1,22 @@
+# Render Blueprint for the whole Smart City project.
+# Deploy: Render dashboard -> New + -> Blueprint -> pick this GitHub repo.
+# Render reads this file and pre-fills everything. You only supply DATABASE_URL
+# (a secret) when prompted.
+services:
+  # ---- Backend API ----
+  - type: web
+    name: smart-city-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false          # you paste the Neon URL when prompted
+      - key: SECRET_KEY
+        generateValue: true  # Render generates a random secret
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "1440"
+      - key: CORS_ORIGINS
+        value: "*"           # tighten to the Vercel admin URL later

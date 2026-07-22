@@ -1,0 +1,25 @@
+# Python
+backend/venv/
+ai-service/venv/
+__pycache__/
+*.pyc
+.env
+
+# Node / React Native / Next.js
+node_modules/
+.expo/
+dist/
+web-build/
+.next/
+out/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Uploads (local dev image storage) — anywhere
+uploads/
+
+# AI trained models (regenerate with train.py)
+ai-service/models/
