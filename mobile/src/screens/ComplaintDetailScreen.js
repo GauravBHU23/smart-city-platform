@@ -12,6 +12,7 @@ import {
 
 import { api, imageUrl } from "../api/client";
 import { useToast } from "../context/ToastContext";
+import { useI18n } from "../i18n";
 import { colors, priorityColor, statusColor } from "../theme";
 
 function Badge({ text, color }) {
@@ -41,6 +42,7 @@ function Stars({ value, onChange, size = 34 }) {
 export default function ComplaintDetailScreen({ route }) {
   const { id } = route.params;
   const toast = useToast();
+  const { t } = useI18n();
   const [item, setItem] = useState(null);
   const [error, setError] = useState("");
 
@@ -59,14 +61,14 @@ export default function ComplaintDetailScreen({ route }) {
 
   async function onSubmitFeedback() {
     if (!rating) {
-      toast.error("Please select a star rating first.");
+      toast.error(t("selectRating"));
       return;
     }
     setSending(true);
     try {
       const updated = await api.submitFeedback(id, rating, comment.trim());
       setItem({ ...item, ...updated });
-      toast.success("Thank you for your feedback! 🙏");
+      toast.success(t("feedbackThanks"));
     } catch (e) {
       toast.error(e.message);
     } finally {
@@ -109,7 +111,7 @@ export default function ComplaintDetailScreen({ route }) {
       <Text style={styles.desc}>{item.description}</Text>
 
       <View style={styles.statusRow}>
-        <Text style={styles.infoLabel}>Current status</Text>
+        <Text style={styles.infoLabel}>{t("currentStatus")}</Text>
         <Badge
           text={item.status.replace("_", " ")}
           color={statusColor[item.status] || colors.muted}
@@ -118,7 +120,7 @@ export default function ComplaintDetailScreen({ route }) {
 
       {item.resolution_note ? (
         <View style={styles.noteBox}>
-          <Text style={styles.noteTitle}>📝 Note from the department</Text>
+          <Text style={styles.noteTitle}>{t("deptNote")}</Text>
           <Text style={styles.noteText}>{item.resolution_note}</Text>
         </View>
       ) : null}
@@ -138,17 +140,17 @@ export default function ComplaintDetailScreen({ route }) {
       ) : null}
 
       <View style={styles.infoRow}>
-        <Text style={styles.infoLabel}>🗓️ Reported</Text>
+        <Text style={styles.infoLabel}>{t("reported")}</Text>
         <Text style={styles.infoValue}>
           {new Date(item.created_at).toLocaleString()}
         </Text>
       </View>
 
       {/* Real audit-trail timeline from the backend */}
-      <Text style={styles.section}>Progress history</Text>
+      <Text style={styles.section}>{t("progressHistory")}</Text>
       <View style={styles.timeline}>
         {history.length === 0 ? (
-          <Text style={{ color: colors.muted }}>No updates yet.</Text>
+          <Text style={{ color: colors.muted }}>{t("noUpdates")}</Text>
         ) : (
           history.map((h, i) => (
             <View key={h.id} style={styles.tlRow}>
@@ -183,7 +185,7 @@ export default function ComplaintDetailScreen({ route }) {
       {isResolved && (
         <View style={styles.feedbackCard}>
           <Text style={styles.section}>
-            {hasFeedback ? "Your feedback" : "Rate the resolution"}
+            {hasFeedback ? t("yourFeedback") : t("rateResolution")}
           </Text>
           {hasFeedback ? (
             <View>
@@ -193,16 +195,14 @@ export default function ComplaintDetailScreen({ route }) {
                   “{item.feedback_comment}”
                 </Text>
               ) : null}
-              <Text style={styles.fbThanks}>
-                Thank you for helping improve city services! 🙏
-              </Text>
+              <Text style={styles.fbThanks}>{t("feedbackHelp")}</Text>
             </View>
           ) : (
             <View>
               <Stars value={rating} onChange={setRating} />
               <TextInput
                 style={styles.fbInput}
-                placeholder="Any comments? (optional)"
+                placeholder={t("commentsOptional")}
                 placeholderTextColor={colors.muted}
                 value={comment}
                 onChangeText={setComment}
@@ -216,7 +216,7 @@ export default function ComplaintDetailScreen({ route }) {
                 {sending ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.fbButtonText}>Submit Feedback</Text>
+                  <Text style={styles.fbButtonText}>{t("submitFeedback")}</Text>
                 )}
               </TouchableOpacity>
             </View>

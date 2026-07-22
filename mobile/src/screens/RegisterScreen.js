@@ -13,11 +13,13 @@ import {
 
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import { useI18n } from "../i18n";
 import { colors } from "../theme";
 
 export default function RegisterScreen({ navigation }) {
   const { register } = useAuth();
   const toast = useToast();
+  const { t } = useI18n();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -28,13 +30,13 @@ export default function RegisterScreen({ navigation }) {
   async function onRegister() {
     setError("");
     if (!fullName || !email || !password) {
-      setError("Name, email and password are required.");
-      toast.error("Name, email and password are required.");
+      setError(t("nameEmailPasswordRequired"));
+      toast.error(t("nameEmailPasswordRequired"));
       return;
     }
     if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
-      toast.error("Password must be at least 6 characters.");
+      setError(t("passwordTooShort"));
+      toast.error(t("passwordTooShort"));
       return;
     }
     setLoading(true);
@@ -45,7 +47,7 @@ export default function RegisterScreen({ navigation }) {
         phone: phone.trim() || null,
         password,
       });
-      toast.success("Account created! Welcome 🎉");
+      toast.success(t("accountCreated"));
     } catch (e) {
       setError(e.message);
       toast.error(e.message);
@@ -60,21 +62,21 @@ export default function RegisterScreen({ navigation }) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView contentContainerStyle={styles.inner}>
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Join Smart City</Text>
+        <Text style={styles.title}>{t("createAccount")}</Text>
+        <Text style={styles.subtitle}>{t("joinSmartCity")}</Text>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <TextInput
           style={styles.input}
-          placeholder="Full name"
+          placeholder={t("fullName")}
           value={fullName}
           onChangeText={setFullName}
           placeholderTextColor={colors.muted}
         />
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder={t("email")}
           autoCapitalize="none"
           keyboardType="email-address"
           value={email}
@@ -83,7 +85,7 @@ export default function RegisterScreen({ navigation }) {
         />
         <TextInput
           style={styles.input}
-          placeholder="Phone (optional)"
+          placeholder={t("phoneOptional")}
           keyboardType="phone-pad"
           value={phone}
           onChangeText={setPhone}
@@ -91,7 +93,7 @@ export default function RegisterScreen({ navigation }) {
         />
         <TextInput
           style={styles.input}
-          placeholder="Password (min 6 chars)"
+          placeholder={t("passwordMin")}
           secureTextEntry
           value={password}
           onChangeText={setPassword}
@@ -106,13 +108,13 @@ export default function RegisterScreen({ navigation }) {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Register</Text>
+            <Text style={styles.buttonText}>{t("register")}</Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.link}>
-            Already have an account? <Text style={styles.linkBold}>Login</Text>
+            {t("haveAccount")} <Text style={styles.linkBold}>{t("login")}</Text>
           </Text>
         </TouchableOpacity>
       </ScrollView>

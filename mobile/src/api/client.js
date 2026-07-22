@@ -68,6 +68,27 @@ export const api = {
   login: (payload) =>
     request("/auth/login", { method: "POST", body: payload, auth: false }),
   me: () => request("/auth/me"),
+  forgotPassword: (email) =>
+    request("/auth/forgot-password", {
+      method: "POST",
+      body: { email },
+      auth: false,
+    }),
+  resetPassword: (email, otp, newPassword) =>
+    request("/auth/reset-password", {
+      method: "POST",
+      body: { email, otp, new_password: newPassword },
+      auth: false,
+    }),
+  savePushToken: (pushToken) =>
+    request("/auth/push-token", {
+      method: "POST",
+      body: { push_token: pushToken },
+    }),
+  nearbyDuplicates: (latitude, longitude, category) =>
+    request(
+      `/complaints/nearby-duplicates?latitude=${latitude}&longitude=${longitude}&category=${category}`
+    ),
 
   // Complaints
   createComplaint: (payload) =>

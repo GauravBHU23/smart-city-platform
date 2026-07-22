@@ -16,19 +16,21 @@ import {
 
 import { api } from "../api/client";
 import { useToast } from "../context/ToastContext";
+import { useI18n } from "../i18n";
 import { colors } from "../theme";
 
 const CATEGORIES = [
-  { key: "ROAD", label: "🛣️ Road" },
-  { key: "WATER", label: "💧 Water" },
-  { key: "ELECTRICITY", label: "💡 Electricity" },
-  { key: "GARBAGE", label: "🗑️ Garbage" },
-  { key: "STREETLIGHT", label: "🔦 Streetlight" },
-  { key: "OTHER", label: "📌 Other" },
+  { key: "ROAD", labelKey: "catRoad" },
+  { key: "WATER", labelKey: "catWater" },
+  { key: "ELECTRICITY", labelKey: "catElectricity" },
+  { key: "GARBAGE", labelKey: "catGarbage" },
+  { key: "STREETLIGHT", labelKey: "catStreetlight" },
+  { key: "OTHER", labelKey: "catOther" },
 ];
 
 export default function ReportComplaintScreen({ navigation }) {
   const toast = useToast();
+  const { t } = useI18n();
   const [category, setCategory] = useState("ROAD");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -37,11 +39,14 @@ export default function ReportComplaintScreen({ navigation }) {
   const [photo, setPhoto] = useState(null);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Nearby open complaints of the same category (duplicate warning).
+  const [duplicates, setDuplicates] = useState([]);
+  const [dupWarned, setDupWarned] = useState(false);
 
   async function pickImage() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      toast.error("Photo library permission was denied.");
+      toast.error(t("photoPermission"));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -58,12 +63,25 @@ export default function ReportComplaintScreen({ navigation }) {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        toast.error("Location permission was denied.");
+        toast.error(t("locationPermission"));
         return;
       }
       const pos = await Location.getCurrentPositionAsync({});
       setCoords({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
-      toast.success("Location captured 📍");
+      toast.success(t("locationToast"));
+
+      // Check for nearby open complaints of the same category.
+      try {
+        const dups = await api.nearbyDuplicates(
+          pos.coords.latitude,
+          pos.coords.longitude,
+          category
+        );
+        setDuplicates(dups);
+        setDupWarned(false);
+      } catch {
+        // duplicate check is best-effort
+      }
 
       // Reverse geocode to a human-readable address (best-effort).
       try {
@@ -78,7 +96,7 @@ export default function ReportComplaintScreen({ navigation }) {
         // ignore reverse-geocode failures
       }
     } catch {
-      toast.error("Could not get your location.");
+      toast.error(t("locationError"));
     } finally {
       setGpsLoading(false);
     }
@@ -86,7 +104,13 @@ export default function ReportComplaintScreen({ navigation }) {
 
   async function onSubmit() {
     if (!title.trim() || !description.trim()) {
-      toast.error("Please add a title and description.");
+      toast.error(t("addTitleDesc"));
+      return;
+    }
+    // If similar complaints exist nearby, warn once before submitting.
+    if (duplicates.length > 0 && !dupWarned) {
+      setDupWarned(true);
+      toast.info(t("duplicateInfo"), 4500);
       return;
     }
     setSubmitting(true);
@@ -107,7 +131,7 @@ export default function ReportComplaintScreen({ navigation }) {
         longitude: coords?.longitude ?? null,
         address: address || null,
       });
-      toast.success("Complaint submitted successfully! ✅");
+      toast.success(t("submitted"));
       navigation.navigate("MyComplaints");
     } catch (e) {
       toast.error(e.message);
@@ -122,7 +146,7 @@ export default function ReportComplaintScreen({ navigation }) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView contentContainerStyle={{ padding: 20 }}>
-        <Text style={styles.label}>Category</Text>
+        <Text style={styles.label}>{t("category")}</Text>
         <View style={styles.catRow}>
           {CATEGORIES.map((c) => (
             <TouchableOpacity
@@ -136,52 +160,52 @@ export default function ReportComplaintScreen({ navigation }) {
                   category === c.key && styles.catTextActive,
                 ]}
               >
-                {c.label}
+                {t(c.labelKey)}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <Text style={styles.label}>Title</Text>
+        <Text style={styles.label}>{t("title")}</Text>
         <TextInput
           style={styles.input}
-          placeholder="e.g. Large pothole near market"
+          placeholder={t("titlePlaceholder")}
           value={title}
           onChangeText={setTitle}
           placeholderTextColor={colors.muted}
         />
 
-        <Text style={styles.label}>Description</Text>
+        <Text style={styles.label}>{t("description")}</Text>
         <TextInput
           style={[styles.input, styles.textarea]}
-          placeholder="Describe the problem…"
+          placeholder={t("descPlaceholder")}
           value={description}
           onChangeText={setDescription}
           multiline
           placeholderTextColor={colors.muted}
         />
 
-        <Text style={styles.label}>Photo (optional)</Text>
+        <Text style={styles.label}>{t("photoOptional")}</Text>
         {photo ? (
           <View>
             <Image source={{ uri: photo.uri }} style={styles.preview} />
             <TouchableOpacity onPress={() => setPhoto(null)}>
-              <Text style={styles.removePhoto}>✕ Remove photo</Text>
+              <Text style={styles.removePhoto}>{t("removePhoto")}</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <TouchableOpacity style={styles.photoBtn} onPress={pickImage}>
-            <Text style={styles.photoText}>📷 Add a photo</Text>
+            <Text style={styles.photoText}>{t("addPhoto")}</Text>
           </TouchableOpacity>
         )}
 
-        <Text style={styles.label}>Location</Text>
+        <Text style={styles.label}>{t("location")}</Text>
         <TouchableOpacity style={styles.gpsBtn} onPress={captureLocation}>
           {gpsLoading ? (
             <ActivityIndicator color={colors.primary} />
           ) : (
             <Text style={styles.gpsText}>
-              📍 {coords ? "Location captured" : "Capture my location"}
+              {coords ? `📍 ${t("locationCaptured")}` : t("captureLocation")}
             </Text>
           )}
         </TouchableOpacity>
@@ -192,6 +216,19 @@ export default function ReportComplaintScreen({ navigation }) {
           </Text>
         ) : null}
 
+        {/* Duplicate warning: similar open complaints nearby */}
+        {duplicates.length > 0 && (
+          <View style={styles.dupBox}>
+            <Text style={styles.dupTitle}>{t("duplicateWarning")}</Text>
+            {duplicates.slice(0, 3).map((d) => (
+              <Text key={d.id} style={styles.dupItem}>
+                • #{d.id} {d.title} ({d.status.replace("_", " ")})
+              </Text>
+            ))}
+            <Text style={styles.dupInfo}>{t("duplicateInfo")}</Text>
+          </View>
+        )}
+
         <TouchableOpacity
           style={styles.submit}
           onPress={onSubmit}
@@ -200,7 +237,11 @@ export default function ReportComplaintScreen({ navigation }) {
           {submitting ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.submitText}>Submit Complaint</Text>
+            <Text style={styles.submitText}>
+              {duplicates.length > 0 && dupWarned
+                ? t("submitAnyway")
+                : t("submitComplaint")}
+            </Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -271,6 +312,17 @@ const styles = StyleSheet.create({
   },
   gpsText: { color: colors.primary, fontWeight: "700" },
   coords: { marginTop: 8, color: colors.muted },
+  dupBox: {
+    backgroundColor: "#fffbeb",
+    borderWidth: 1,
+    borderColor: "#f59e0b",
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 20,
+  },
+  dupTitle: { fontWeight: "800", color: "#b45309", marginBottom: 6 },
+  dupItem: { color: "#78350f", marginTop: 2, fontSize: 13 },
+  dupInfo: { color: "#92400e", marginTop: 8, fontSize: 12 },
   submit: {
     backgroundColor: colors.primary,
     borderRadius: 12,

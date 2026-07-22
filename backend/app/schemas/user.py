@@ -19,6 +19,20 @@ class UserLogin(BaseModel):
     password: str
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    otp: str = Field(min_length=6, max_length=6)
+    new_password: str = Field(min_length=6, max_length=100)
+
+
+class PushTokenUpdate(BaseModel):
+    push_token: str = Field(min_length=10, max_length=200)
+
+
 class RoleUpdate(BaseModel):
     role: str
 

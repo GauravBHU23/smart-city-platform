@@ -12,11 +12,13 @@ import {
 
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import { useI18n } from "../i18n";
 import { colors } from "../theme";
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
   const toast = useToast();
+  const { t, lang, changeLang } = useI18n();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -25,15 +27,15 @@ export default function LoginScreen({ navigation }) {
   async function onLogin() {
     setError("");
     if (!email || !password) {
-      setError("Please enter email and password.");
-      toast.error("Please enter email and password.");
+      setError(t("enterEmailPassword"));
+      toast.error(t("enterEmailPassword"));
       return;
     }
     setLoading(true);
     try {
       await login(email.trim().toLowerCase(), password);
       // On success, AuthContext updates and the app switches to the main stack.
-      toast.success("Logged in successfully! 👋");
+      toast.success(t("loginSuccess"));
     } catch (e) {
       setError(e.message);
       toast.error(e.message);
@@ -48,15 +50,25 @@ export default function LoginScreen({ navigation }) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.inner}>
+        {/* Language toggle */}
+        <TouchableOpacity
+          style={styles.langBtn}
+          onPress={() => changeLang(lang === "en" ? "hi" : "en")}
+        >
+          <Text style={styles.langText}>
+            {lang === "en" ? "🌐 हिंदी" : "🌐 English"}
+          </Text>
+        </TouchableOpacity>
+
         <Text style={styles.logo}>🏙️</Text>
-        <Text style={styles.title}>Smart City</Text>
-        <Text style={styles.subtitle}>Report. Track. Resolve.</Text>
+        <Text style={styles.title}>{t("appName")}</Text>
+        <Text style={styles.subtitle}>{t("tagline")}</Text>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder={t("email")}
           autoCapitalize="none"
           keyboardType="email-address"
           value={email}
@@ -65,7 +77,7 @@ export default function LoginScreen({ navigation }) {
         />
         <TextInput
           style={styles.input}
-          placeholder="Password"
+          placeholder={t("password")}
           secureTextEntry
           value={password}
           onChangeText={setPassword}
@@ -80,13 +92,17 @@ export default function LoginScreen({ navigation }) {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>Login</Text>
+            <Text style={styles.buttonText}>{t("login")}</Text>
           )}
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
+          <Text style={styles.forgot}>{t("forgotPassword")}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate("Register")}>
           <Text style={styles.link}>
-            Don&apos;t have an account? <Text style={styles.linkBold}>Register</Text>
+            {t("noAccount")} <Text style={styles.linkBold}>{t("register")}</Text>
           </Text>
         </TouchableOpacity>
       </View>
@@ -131,6 +147,24 @@ const styles = StyleSheet.create({
   buttonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
   link: { textAlign: "center", marginTop: 20, color: colors.muted },
   linkBold: { color: colors.primary, fontWeight: "700" },
+  forgot: {
+    textAlign: "center",
+    marginTop: 16,
+    color: colors.primary,
+    fontWeight: "700",
+  },
+  langBtn: {
+    position: "absolute",
+    top: 60,
+    right: 24,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  langText: { fontWeight: "700", color: colors.primary },
   error: {
     color: colors.danger,
     textAlign: "center",

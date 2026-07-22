@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.core import ai_client
 from app.core.deps import get_current_user, require_admin
+from app.core.push import notify_status_change
 from app.database import get_db
 from app.models.complaint import PRIORITIES, Complaint, StatusHistory
 from app.models.user import User
@@ -105,6 +106,48 @@ def ai_suggest(
     if result is None:
         return {"available": False}
     return {"available": True, **result}
+
+
+@router.get("/nearby-duplicates", response_model=list[ComplaintOut])
+def nearby_duplicates(
+    latitude: float,
+    longitude: float,
+    category: str,
+    db: Session = Depends(get_db),
+    _user: User = Depends(get_current_user),
+):
+    """
+    Open complaints of the same category within ~150 m of the given point.
+    The mobile app calls this before submitting so citizens can avoid
+    filing a duplicate (and can see it's already reported).
+    """
+    # ~150 m expressed in degrees (1 deg latitude ≈ 111 km). Cheap bounding
+    # box first, then exact distance filter in Python — fine at city scale.
+    import math
+
+    radius_m = 150
+    deg = radius_m / 111_000
+    lon_deg = deg / max(math.cos(math.radians(latitude)), 0.01)
+
+    candidates = (
+        db.query(Complaint)
+        .filter(
+            Complaint.category == category.upper(),
+            Complaint.status.notin_(["RESOLVED", "CLOSED"]),
+            Complaint.latitude.between(latitude - deg, latitude + deg),
+            Complaint.longitude.between(longitude - lon_deg, longitude + lon_deg),
+        )
+        .order_by(Complaint.created_at.desc())
+        .limit(20)
+        .all()
+    )
+
+    def dist_m(c):
+        dlat = (c.latitude - latitude) * 111_000
+        dlon = (c.longitude - longitude) * 111_000 * math.cos(math.radians(latitude))
+        return math.sqrt(dlat * dlat + dlon * dlon)
+
+    return [c for c in candidates if dist_m(c) <= radius_m][:5]
 
 
 @router.get("/my", response_model=list[ComplaintOut])
@@ -256,6 +299,10 @@ def update_status(
     _log_history(db, complaint, admin, old, payload.status, payload.note)
     db.commit()
     db.refresh(complaint)
+
+    # Notify the citizen on their phone (best-effort).
+    if old != payload.status:
+        notify_status_change(complaint.user, complaint, payload.status, payload.note)
     return complaint
 
 
@@ -301,4 +348,7 @@ def assign_complaint(
     )
     db.commit()
     db.refresh(complaint)
+
+    if old != complaint.status:
+        notify_status_change(complaint.user, complaint, complaint.status)
     return complaint

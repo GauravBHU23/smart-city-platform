@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 
 import { api, clearToken, getToken, saveToken } from "../api/client";
+import { registerForPushNotifications } from "../notifications";
 
 const AuthContext = createContext(null);
 
@@ -16,6 +17,7 @@ export function AuthProvider({ children }) {
         if (token) {
           const me = await api.me();
           setUser(me);
+          registerForPushNotifications(); // fire-and-forget
         }
       } catch {
         await clearToken();
@@ -29,12 +31,14 @@ export function AuthProvider({ children }) {
     const data = await api.login({ email, password });
     await saveToken(data.access_token);
     setUser(data.user);
+    registerForPushNotifications(); // fire-and-forget
   }
 
   async function register(payload) {
     const data = await api.register(payload);
     await saveToken(data.access_token);
     setUser(data.user);
+    registerForPushNotifications(); // fire-and-forget
   }
 
   async function logout() {

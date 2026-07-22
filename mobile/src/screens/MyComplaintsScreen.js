@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import { api } from "../api/client";
+import { useI18n } from "../i18n";
 import { colors, priorityColor, statusColor } from "../theme";
 
 function Badge({ text, color }) {
@@ -22,6 +23,7 @@ function Badge({ text, color }) {
 }
 
 export default function MyComplaintsScreen({ navigation }) {
+  const { t } = useI18n();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -73,13 +75,13 @@ export default function MyComplaintsScreen({ navigation }) {
         <View style={styles.center}>
           <Text style={styles.emptyIcon}>📭</Text>
           <Text style={styles.emptyText}>
-            {error || "No complaints yet. Report one from Home."}
+            {error || t("noComplaints")}
           </Text>
           <TouchableOpacity
             style={styles.emptyBtn}
             onPress={() => navigation.navigate("ReportComplaint")}
           >
-            <Text style={styles.emptyBtnText}>+ Report Complaint</Text>
+            <Text style={styles.emptyBtnText}>+ {t("reportComplaint")}</Text>
           </TouchableOpacity>
         </View>
       }

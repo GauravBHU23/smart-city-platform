@@ -2,10 +2,12 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import { useAuth } from "../context/AuthContext";
+import { useI18n } from "../i18n";
 import { colors } from "../theme";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
+  const { t, lang, changeLang } = useI18n();
 
   const initials = (user?.full_name || "U")
     .split(" ")
@@ -23,13 +25,48 @@ export default function ProfileScreen() {
       <Text style={styles.role}>{user?.role}</Text>
 
       <View style={styles.card}>
-        <Row label="Email" value={user?.email} />
+        <Row label={t("email")} value={user?.email} />
         <Row label="Phone" value={user?.phone || "—"} />
         <Row label="User ID" value={String(user?.id)} />
       </View>
 
+      {/* Language switch */}
+      <View style={[styles.card, { marginTop: 16 }]}>
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>{t("language")}</Text>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <TouchableOpacity
+              style={[styles.langOpt, lang === "en" && styles.langOptActive]}
+              onPress={() => changeLang("en")}
+            >
+              <Text
+                style={[
+                  styles.langOptText,
+                  lang === "en" && styles.langOptTextActive,
+                ]}
+              >
+                English
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.langOpt, lang === "hi" && styles.langOptActive]}
+              onPress={() => changeLang("hi")}
+            >
+              <Text
+                style={[
+                  styles.langOptText,
+                  lang === "hi" && styles.langOptTextActive,
+                ]}
+              >
+                हिंदी
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
       <TouchableOpacity style={styles.logout} onPress={logout}>
-        <Text style={styles.logoutText}>Logout</Text>
+        <Text style={styles.logoutText}>{t("logout")}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -90,4 +127,14 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   logoutText: { color: colors.danger, fontWeight: "800" },
+  langOpt: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+  langOptActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  langOptText: { fontWeight: "700", color: colors.text },
+  langOptTextActive: { color: "#fff" },
 });

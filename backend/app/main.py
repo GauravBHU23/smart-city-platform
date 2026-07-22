@@ -25,18 +25,27 @@ Base.metadata.create_all(bind=engine)
 def _ensure_columns():
     from sqlalchemy import inspect
 
-    new_columns = {
-        "resolution_note": "TEXT",
-        "feedback_rating": "INTEGER",
-        "feedback_comment": "TEXT",
+    per_table = {
+        "complaints": {
+            "resolution_note": "TEXT",
+            "feedback_rating": "INTEGER",
+            "feedback_comment": "TEXT",
+        },
+        "users": {
+            "reset_otp_hash": "VARCHAR",
+            "reset_otp_expires": "TIMESTAMP",
+            "push_token": "VARCHAR",
+        },
     }
-    existing = {c["name"] for c in inspect(engine).get_columns("complaints")}
+    insp = inspect(engine)
     with engine.begin() as conn:
-        for col, sqltype in new_columns.items():
-            if col not in existing:
-                conn.execute(
-                    text(f"ALTER TABLE complaints ADD COLUMN {col} {sqltype}")
-                )
+        for table, new_columns in per_table.items():
+            existing = {c["name"] for c in insp.get_columns(table)}
+            for col, sqltype in new_columns.items():
+                if col not in existing:
+                    conn.execute(
+                        text(f"ALTER TABLE {table} ADD COLUMN {col} {sqltype}")
+                    )
 
 
 _ensure_columns()

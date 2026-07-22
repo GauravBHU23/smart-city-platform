@@ -2,38 +2,37 @@ import React from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import { useAuth } from "../context/AuthContext";
+import { useI18n } from "../i18n";
 import { colors } from "../theme";
 
 const ACTIONS = [
-  { key: "Report", icon: "📝", label: "Report Complaint", screen: "ReportComplaint" },
-  { key: "My", icon: "📋", label: "My Complaints", screen: "MyComplaints" },
-  { key: "Weather", icon: "🌤️", label: "Weather", screen: "Weather" },
-  { key: "Profile", icon: "👤", label: "Profile", screen: "Profile" },
+  { key: "Report", icon: "📝", labelKey: "reportComplaint", screen: "ReportComplaint" },
+  { key: "My", icon: "📋", labelKey: "myComplaints", screen: "MyComplaints" },
+  { key: "Weather", icon: "🌤️", labelKey: "weather", screen: "Weather" },
+  { key: "Profile", icon: "👤", labelKey: "profile", screen: "Profile" },
 ];
 
 export default function HomeScreen({ navigation }) {
   const { user } = useAuth();
+  const { t } = useI18n();
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 20 }}>
-      <Text style={styles.hi}>Hello,</Text>
-      <Text style={styles.name}>{user?.full_name || "Citizen"} 👋</Text>
+      <Text style={styles.hi}>{t("hello")}</Text>
+      <Text style={styles.name}>{user?.full_name || t("citizen")} 👋</Text>
 
       <View style={styles.banner}>
-        <Text style={styles.bannerTitle}>Make your city better</Text>
-        <Text style={styles.bannerText}>
-          Spotted a problem? Report it with a photo and location — we&apos;ll
-          route it to the right department.
-        </Text>
+        <Text style={styles.bannerTitle}>{t("bannerTitle")}</Text>
+        <Text style={styles.bannerText}>{t("bannerText")}</Text>
         <TouchableOpacity
           style={styles.bannerBtn}
           onPress={() => navigation.navigate("ReportComplaint")}
         >
-          <Text style={styles.bannerBtnText}>+ Report now</Text>
+          <Text style={styles.bannerBtnText}>{t("reportNow")}</Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.section}>Quick actions</Text>
+      <Text style={styles.section}>{t("quickActions")}</Text>
       <View style={styles.grid}>
         {ACTIONS.map((a) => (
           <TouchableOpacity
@@ -42,7 +41,7 @@ export default function HomeScreen({ navigation }) {
             onPress={() => navigation.navigate(a.screen)}
           >
             <Text style={styles.tileIcon}>{a.icon}</Text>
-            <Text style={styles.tileLabel}>{a.label}</Text>
+            <Text style={styles.tileLabel}>{t(a.labelKey)}</Text>
           </TouchableOpacity>
         ))}
       </View>
