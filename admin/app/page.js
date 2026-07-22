@@ -15,10 +15,23 @@ export default function LoginPage() {
   async function onSubmit(e) {
     e.preventDefault();
     setError("");
+
+    // Client-side checks so users get a clear message instead of a raw
+    // validation error from the backend.
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !password) {
+      setError("Please enter your email and password.");
+      return;
+    }
+    if (!cleanEmail.includes("@")) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
     setLoading(true);
     try {
       const data = await api.login({
-        email: email.trim().toLowerCase(),
+        email: cleanEmail,
         password,
       });
       if (data.user.role !== "ADMIN") {
@@ -48,6 +61,7 @@ export default function LoginPage() {
           className="input"
           style={styles.field}
           type="email"
+          required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="admin@city.com"
@@ -58,6 +72,7 @@ export default function LoginPage() {
           className="input"
           style={styles.field}
           type="password"
+          required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
