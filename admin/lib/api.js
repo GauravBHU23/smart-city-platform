@@ -67,6 +67,7 @@ export const api = {
     const qs = q.toString();
     return request(`/complaints${qs ? "?" + qs : ""}`);
   },
+  getComplaint: (id) => request(`/complaints/${id}`),
   updateStatus: (id, status) =>
     request(`/complaints/${id}/status`, { method: "PATCH", body: { status } }),
   updatePriority: (id, priority) =>
@@ -74,7 +75,25 @@ export const api = {
       method: "PATCH",
       body: { priority },
     }),
+  assignComplaint: (id, officerId) =>
+    request(`/complaints/${id}/assign?officer_id=${officerId}`, {
+      method: "PATCH",
+    }),
+
+  // Users
+  listUsers: (role) =>
+    request(`/users${role ? "?role=" + role : ""}`),
+  listOfficers: () => request("/users/officers"),
+  updateRole: (id, role) =>
+    request(`/users/${id}/role`, { method: "PATCH", body: { role } }),
 
   summary: () => request("/analytics/summary"),
   geojson: () => request("/analytics/geojson"),
 };
+
+// Full URL for a backend image path (e.g. /files/x.png).
+export function imageUrl(path) {
+  if (!path) return null;
+  if (path.startsWith("http")) return path;
+  return `${API_URL}${path}`;
+}

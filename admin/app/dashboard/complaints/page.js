@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { api } from "@/lib/api";
@@ -110,7 +111,13 @@ export default function ComplaintsPage() {
               <tr key={c.id} style={{ opacity: savingId === c.id ? 0.5 : 1 }}>
                 <td>#{c.id}</td>
                 <td>
-                  <div style={{ fontWeight: 600 }}>{c.title}</div>
+                  <Link
+                    href={`/dashboard/complaints/${c.id}`}
+                    style={{ fontWeight: 600, color: "var(--primary)" }}
+                  >
+                    {c.image_url ? "📷 " : ""}
+                    {c.title}
+                  </Link>
                   <div style={{ color: "var(--muted)", maxWidth: 260 }}>
                     {c.description}
                   </div>

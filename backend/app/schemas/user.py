@@ -1,6 +1,8 @@
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+ROLES = ["CITIZEN", "OFFICER", "ADMIN"]
 
 
 # ---- Requests ----
@@ -15,6 +17,18 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+
+class RoleUpdate(BaseModel):
+    role: str
+
+    @field_validator("role")
+    @classmethod
+    def valid_role(cls, v: str) -> str:
+        v = v.upper()
+        if v not in ROLES:
+            raise ValueError(f"role must be one of {ROLES}")
+        return v
 
 
 # ---- Responses ----

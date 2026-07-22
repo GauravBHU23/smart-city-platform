@@ -9,7 +9,7 @@ from app.config import CORS_ORIGINS
 from app.database import Base, engine
 from app.models import complaint as complaint_model  # noqa: F401 (registers table)
 from app.models import user as user_model  # noqa: F401  (registers table)
-from app.routers import analytics, auth, complaints, uploads
+from app.routers import analytics, auth, complaints, uploads, users
 
 app = FastAPI(
     title="Smart City API",
@@ -42,6 +42,7 @@ app.include_router(auth.router)
 app.include_router(complaints.router)
 app.include_router(uploads.router)
 app.include_router(analytics.router)
+app.include_router(users.router)
 
 
 @app.get("/")
