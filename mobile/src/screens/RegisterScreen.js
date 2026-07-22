@@ -12,10 +12,12 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import { colors } from "../theme";
 
 export default function RegisterScreen({ navigation }) {
   const { register } = useAuth();
+  const toast = useToast();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -27,10 +29,12 @@ export default function RegisterScreen({ navigation }) {
     setError("");
     if (!fullName || !email || !password) {
       setError("Name, email and password are required.");
+      toast.error("Name, email and password are required.");
       return;
     }
     if (password.length < 6) {
       setError("Password must be at least 6 characters.");
+      toast.error("Password must be at least 6 characters.");
       return;
     }
     setLoading(true);
@@ -41,8 +45,10 @@ export default function RegisterScreen({ navigation }) {
         phone: phone.trim() || null,
         password,
       });
+      toast.success("Account created! Welcome 🎉");
     } catch (e) {
       setError(e.message);
+      toast.error(e.message);
     } finally {
       setLoading(false);
     }

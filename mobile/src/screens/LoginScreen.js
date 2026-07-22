@@ -11,10 +11,12 @@ import {
 } from "react-native";
 
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 import { colors } from "../theme";
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuth();
+  const toast = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -24,14 +26,17 @@ export default function LoginScreen({ navigation }) {
     setError("");
     if (!email || !password) {
       setError("Please enter email and password.");
+      toast.error("Please enter email and password.");
       return;
     }
     setLoading(true);
     try {
       await login(email.trim().toLowerCase(), password);
       // On success, AuthContext updates and the app switches to the main stack.
+      toast.success("Logged in successfully! 👋");
     } catch (e) {
       setError(e.message);
+      toast.error(e.message);
     } finally {
       setLoading(false);
     }

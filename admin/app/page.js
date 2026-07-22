@@ -4,9 +4,11 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { api, saveToken } from "@/lib/api";
+import { useToast } from "@/lib/toast";
 
 export default function LoginPage() {
   const router = useRouter();
+  const toast = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -21,10 +23,12 @@ export default function LoginPage() {
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail || !password) {
       setError("Please enter your email and password.");
+      toast.error("Please enter your email and password.");
       return;
     }
     if (!cleanEmail.includes("@")) {
       setError("Please enter a valid email address.");
+      toast.error("Please enter a valid email address.");
       return;
     }
 
@@ -36,13 +40,16 @@ export default function LoginPage() {
       });
       if (data.user.role !== "ADMIN") {
         setError("This account is not an admin.");
+        toast.error("This account is not an admin.");
         setLoading(false);
         return;
       }
       saveToken(data.access_token);
+      toast.success(`Welcome, ${data.user.full_name}! 👋`);
       router.push("/dashboard");
     } catch (err) {
       setError(err.message);
+      toast.error(err.message);
       setLoading(false);
     }
   }

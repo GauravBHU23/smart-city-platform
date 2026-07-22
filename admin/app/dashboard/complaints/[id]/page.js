@@ -6,9 +6,11 @@ import { useEffect, useState } from "react";
 
 import { api, imageUrl } from "@/lib/api";
 import { PRIORITIES, STATUSES, priorityColor, statusColor } from "@/lib/theme";
+import { useToast } from "@/lib/toast";
 
 export default function ComplaintDetailPage() {
   const { id } = useParams();
+  const toast = useToast();
   const [c, setC] = useState(null);
   const [officers, setOfficers] = useState([]);
   const [error, setError] = useState("");
@@ -32,13 +34,14 @@ export default function ComplaintDetailPage() {
     load();
   }, [id]);
 
-  async function run(fn) {
+  async function run(fn, successMsg) {
     setSaving(true);
     try {
       const updated = await fn();
       setC(updated);
+      if (successMsg) toast.success(successMsg);
     } catch (e) {
-      alert(e.message);
+      toast.error(e.message);
     } finally {
       setSaving(false);
     }
@@ -115,7 +118,10 @@ export default function ComplaintDetailPage() {
               value={c.status}
               disabled={saving}
               onChange={(e) =>
-                run(() => api.updateStatus(c.id, e.target.value))
+                run(
+                  () => api.updateStatus(c.id, e.target.value),
+                  `Status updated to ${e.target.value.replace("_", " ")}`
+                )
               }
               style={{ width: "100%", color: statusColor[c.status], fontWeight: 700 }}
             >
@@ -158,7 +164,10 @@ export default function ComplaintDetailPage() {
               value={c.priority}
               disabled={saving}
               onChange={(e) =>
-                run(() => api.updatePriority(c.id, e.target.value))
+                run(
+                  () => api.updatePriority(c.id, e.target.value),
+                  `Priority set to ${e.target.value}`
+                )
               }
               style={{ width: "100%", color: priorityColor[c.priority], fontWeight: 700 }}
             >
@@ -176,10 +185,16 @@ export default function ComplaintDetailPage() {
               className="select"
               value={c.assigned_to || ""}
               disabled={saving}
-              onChange={(e) =>
-                e.target.value &&
-                run(() => api.assignComplaint(c.id, e.target.value))
-              }
+              onChange={(e) => {
+                if (!e.target.value) return;
+                const name =
+                  officers.find((o) => String(o.id) === e.target.value)
+                    ?.full_name || "officer";
+                run(
+                  () => api.assignComplaint(c.id, e.target.value),
+                  `Assigned to ${name}`
+                );
+              }}
               style={{ width: "100%" }}
             >
               <option value="">— not assigned —</option>

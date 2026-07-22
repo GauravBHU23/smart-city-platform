@@ -3,7 +3,6 @@ import * as Location from "expo-location";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -16,6 +15,7 @@ import {
 } from "react-native";
 
 import { api } from "../api/client";
+import { useToast } from "../context/ToastContext";
 import { colors } from "../theme";
 
 const CATEGORIES = [
@@ -28,6 +28,7 @@ const CATEGORIES = [
 ];
 
 export default function ReportComplaintScreen({ navigation }) {
+  const toast = useToast();
   const [category, setCategory] = useState("ROAD");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -40,7 +41,7 @@ export default function ReportComplaintScreen({ navigation }) {
   async function pickImage() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Permission needed", "Photo library permission was denied.");
+      toast.error("Photo library permission was denied.");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -57,11 +58,12 @@ export default function ReportComplaintScreen({ navigation }) {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission needed", "Location permission was denied.");
+        toast.error("Location permission was denied.");
         return;
       }
       const pos = await Location.getCurrentPositionAsync({});
       setCoords({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+      toast.success("Location captured 📍");
 
       // Reverse geocode to a human-readable address (best-effort).
       try {
@@ -76,7 +78,7 @@ export default function ReportComplaintScreen({ navigation }) {
         // ignore reverse-geocode failures
       }
     } catch {
-      Alert.alert("Error", "Could not get your location.");
+      toast.error("Could not get your location.");
     } finally {
       setGpsLoading(false);
     }
@@ -84,7 +86,7 @@ export default function ReportComplaintScreen({ navigation }) {
 
   async function onSubmit() {
     if (!title.trim() || !description.trim()) {
-      Alert.alert("Missing info", "Please add a title and description.");
+      toast.error("Please add a title and description.");
       return;
     }
     setSubmitting(true);
@@ -105,11 +107,10 @@ export default function ReportComplaintScreen({ navigation }) {
         longitude: coords?.longitude ?? null,
         address: address || null,
       });
-      Alert.alert("Submitted ✅", "Your complaint has been registered.", [
-        { text: "OK", onPress: () => navigation.navigate("MyComplaints") },
-      ]);
+      toast.success("Complaint submitted successfully! ✅");
+      navigation.navigate("MyComplaints");
     } catch (e) {
-      Alert.alert("Error", e.message);
+      toast.error(e.message);
     } finally {
       setSubmitting(false);
     }
