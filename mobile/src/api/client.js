@@ -74,6 +74,11 @@ export const api = {
     request("/complaints", { method: "POST", body: payload }),
   myComplaints: () => request("/complaints/my"),
   getComplaint: (id) => request(`/complaints/${id}`),
+  submitFeedback: (id, rating, comment) =>
+    request(`/complaints/${id}/feedback`, {
+      method: "POST",
+      body: { rating, comment: comment || null },
+    }),
 
   // Upload an image (multipart). `asset` is an expo-image-picker asset.
   uploadImage: async (asset) => {

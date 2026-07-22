@@ -5,8 +5,10 @@ import { useCallback, useEffect, useState } from "react";
 
 import { api } from "@/lib/api";
 import { PRIORITIES, STATUSES, priorityColor, statusColor } from "@/lib/theme";
+import { useToast } from "@/lib/toast";
 
 export default function ComplaintsPage() {
+  const toast = useToast();
   const [items, setItems] = useState([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [loading, setLoading] = useState(true);
@@ -37,8 +39,9 @@ export default function ComplaintsPage() {
     try {
       const updated = await api.updateStatus(id, status);
       setItems((prev) => prev.map((c) => (c.id === id ? updated : c)));
+      toast.success(`#${id} status updated`);
     } catch (e) {
-      alert(e.message);
+      toast.error(e.message);
     } finally {
       setSavingId(null);
     }
@@ -49,10 +52,20 @@ export default function ComplaintsPage() {
     try {
       const updated = await api.updatePriority(id, priority);
       setItems((prev) => prev.map((c) => (c.id === id ? updated : c)));
+      toast.success(`#${id} priority updated`);
     } catch (e) {
-      alert(e.message);
+      toast.error(e.message);
     } finally {
       setSavingId(null);
+    }
+  }
+
+  async function onExport() {
+    try {
+      await api.exportCsv();
+      toast.success("CSV report downloaded 📄");
+    } catch (e) {
+      toast.error(e.message);
     }
   }
 
@@ -63,18 +76,23 @@ export default function ComplaintsPage() {
           <h1 style={{ fontSize: 26 }}>Complaints</h1>
           <p style={{ color: "var(--muted)" }}>{items.length} shown</p>
         </div>
-        <select
-          className="select"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="">All statuses</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s.replace("_", " ")}
-            </option>
-          ))}
-        </select>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <select
+            className="select"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="">All statuses</option>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s.replace("_", " ")}
+              </option>
+            ))}
+          </select>
+          <button className="btn" onClick={onExport} style={{ whiteSpace: "nowrap" }}>
+            ⬇ Export CSV
+          </button>
+        </div>
       </div>
 
       {error && <p style={{ color: "var(--danger)" }}>{error}</p>}

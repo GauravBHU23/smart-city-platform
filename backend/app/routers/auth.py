@@ -1,7 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user
+from app.core.rate_limit import (
+    check_login_allowed,
+    record_failed_login,
+    reset_login_attempts,
+)
 from app.core.security import create_access_token, hash_password, verify_password
 from app.database import get_db
 from app.models.user import User
@@ -35,14 +40,19 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=Token)
-def login(payload: UserLogin, db: Session = Depends(get_db)):
+def login(payload: UserLogin, request: Request, db: Session = Depends(get_db)):
+    # Brute-force protection: block after repeated failures from same IP+email.
+    check_login_allowed(request, payload.email)
+
     user = db.query(User).filter(User.email == payload.email).first()
     if not user or not verify_password(payload.password, user.hashed_password):
+        record_failed_login(request, payload.email)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
 
+    reset_login_attempts(request, payload.email)
     token = create_access_token({"sub": str(user.id), "role": user.role})
     return Token(access_token=token, user=UserOut.model_validate(user))
 

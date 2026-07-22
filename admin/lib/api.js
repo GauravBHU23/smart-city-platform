@@ -68,8 +68,11 @@ export const api = {
     return request(`/complaints${qs ? "?" + qs : ""}`);
   },
   getComplaint: (id) => request(`/complaints/${id}`),
-  updateStatus: (id, status) =>
-    request(`/complaints/${id}/status`, { method: "PATCH", body: { status } }),
+  updateStatus: (id, status, note) =>
+    request(`/complaints/${id}/status`, {
+      method: "PATCH",
+      body: { status, note: note || null },
+    }),
   updatePriority: (id, priority) =>
     request(`/complaints/${id}/priority`, {
       method: "PATCH",
@@ -89,6 +92,22 @@ export const api = {
 
   summary: () => request("/analytics/summary"),
   geojson: () => request("/analytics/geojson"),
+
+  // Download the complaints CSV report (triggers a browser download).
+  exportCsv: async () => {
+    const token = getToken();
+    const res = await fetch(`${API_URL}/complaints/export`, {
+      headers: { Authorization: token ? `Bearer ${token}` : "" },
+    });
+    if (!res.ok) throw new Error("Export failed");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `complaints_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 };
 
 // Full URL for a backend image path (e.g. /files/x.png).

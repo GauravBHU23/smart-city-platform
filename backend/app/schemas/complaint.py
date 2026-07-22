@@ -19,6 +19,8 @@ class ComplaintCreate(BaseModel):
 
 class ComplaintStatusUpdate(BaseModel):
     status: str
+    # Optional note shown to the citizen, e.g. "Pothole repaired on 20 July".
+    note: str | None = Field(default=None, max_length=500)
 
     @field_validator("status")
     @classmethod
@@ -27,6 +29,11 @@ class ComplaintStatusUpdate(BaseModel):
         if v not in STATUSES:
             raise ValueError(f"status must be one of {STATUSES}")
         return v
+
+
+class FeedbackCreate(BaseModel):
+    rating: int = Field(ge=1, le=5)
+    comment: str | None = Field(default=None, max_length=500)
 
 
 class ComplaintPriorityUpdate(BaseModel):
@@ -43,6 +50,19 @@ class ComplaintPriorityUpdate(BaseModel):
 
 # ---- Response ----
 
+class StatusHistoryOut(BaseModel):
+    id: int
+    old_status: str | None
+    new_status: str
+    note: str | None
+    changed_by: int
+    changed_by_name: str | None = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class ComplaintOut(BaseModel):
     id: int
     user_id: int
@@ -56,8 +76,17 @@ class ComplaintOut(BaseModel):
     status: str
     priority: str
     assigned_to: int | None
+    resolution_note: str | None = None
+    feedback_rating: int | None = None
+    feedback_comment: str | None = None
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class ComplaintDetailOut(ComplaintOut):
+    """Complaint plus its full status history (for detail pages)."""
+
+    history: list[StatusHistoryOut] = []

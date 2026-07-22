@@ -32,6 +32,26 @@ export default function OverviewPage() {
         <Stat label="Open" value={open} icon="🟠" />
         <Stat label="Resolved / Closed" value={resolved} icon="✅" />
         <Stat label="Registered Users" value={data.total_users} icon="👥" />
+        <Stat
+          label="Citizen Satisfaction"
+          value={
+            data.avg_feedback_rating != null
+              ? `${data.avg_feedback_rating} / 5 ⭐`
+              : "—"
+          }
+          icon="😊"
+        />
+        <Stat
+          label="Avg. Resolution Time"
+          value={
+            data.avg_resolution_hours != null
+              ? data.avg_resolution_hours >= 48
+                ? `${(data.avg_resolution_hours / 24).toFixed(1)} days`
+                : `${data.avg_resolution_hours} hrs`
+              : "—"
+          }
+          icon="⏱️"
+        />
       </div>
 
       <div style={styles.row}>

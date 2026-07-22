@@ -1,24 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 
 import { api, imageUrl } from "../api/client";
+import { useToast } from "../context/ToastContext";
 import { colors, priorityColor, statusColor } from "../theme";
-
-const FLOW = [
-  "PENDING",
-  "UNDER_REVIEW",
-  "ASSIGNED",
-  "IN_PROGRESS",
-  "RESOLVED",
-  "CLOSED",
-];
 
 function Badge({ text, color }) {
   return (
@@ -28,14 +22,57 @@ function Badge({ text, color }) {
   );
 }
 
+function Stars({ value, onChange, size = 34 }) {
+  return (
+    <View style={{ flexDirection: "row", gap: 6 }}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <TouchableOpacity
+          key={n}
+          onPress={onChange ? () => onChange(n) : undefined}
+          disabled={!onChange}
+        >
+          <Text style={{ fontSize: size }}>{n <= value ? "⭐" : "☆"}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
 export default function ComplaintDetailScreen({ route }) {
   const { id } = route.params;
+  const toast = useToast();
   const [item, setItem] = useState(null);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  // Feedback form state
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const load = useCallback(() => {
     api.getComplaint(id).then(setItem).catch((e) => setError(e.message));
   }, [id]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function onSubmitFeedback() {
+    if (!rating) {
+      toast.error("Please select a star rating first.");
+      return;
+    }
+    setSending(true);
+    try {
+      const updated = await api.submitFeedback(id, rating, comment.trim());
+      setItem({ ...item, ...updated });
+      toast.success("Thank you for your feedback! 🙏");
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setSending(false);
+    }
+  }
 
   if (error) {
     return (
@@ -52,8 +89,10 @@ export default function ComplaintDetailScreen({ route }) {
     );
   }
 
-  const currentIdx = FLOW.indexOf(item.status);
   const img = imageUrl(item.image_url);
+  const history = item.history || [];
+  const isResolved = item.status === "RESOLVED" || item.status === "CLOSED";
+  const hasFeedback = item.feedback_rating != null;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 20 }}>
@@ -68,6 +107,21 @@ export default function ComplaintDetailScreen({ route }) {
       </View>
       <Text style={styles.title}>{item.title}</Text>
       <Text style={styles.desc}>{item.description}</Text>
+
+      <View style={styles.statusRow}>
+        <Text style={styles.infoLabel}>Current status</Text>
+        <Badge
+          text={item.status.replace("_", " ")}
+          color={statusColor[item.status] || colors.muted}
+        />
+      </View>
+
+      {item.resolution_note ? (
+        <View style={styles.noteBox}>
+          <Text style={styles.noteTitle}>📝 Note from the department</Text>
+          <Text style={styles.noteText}>{item.resolution_note}</Text>
+        </View>
+      ) : null}
 
       {item.address ? (
         <View style={styles.infoRow}>
@@ -90,32 +144,85 @@ export default function ComplaintDetailScreen({ route }) {
         </Text>
       </View>
 
-      <Text style={styles.section}>Status</Text>
+      {/* Real audit-trail timeline from the backend */}
+      <Text style={styles.section}>Progress history</Text>
       <View style={styles.timeline}>
-        {FLOW.map((step, i) => {
-          const done = i <= currentIdx;
-          const active = i === currentIdx;
-          return (
-            <View key={step} style={styles.tlRow}>
-              <View
-                style={[
-                  styles.tlDot,
-                  done && { backgroundColor: statusColor[item.status] },
-                  active && styles.tlDotActive,
-                ]}
-              />
-              <Text
-                style={[
-                  styles.tlLabel,
-                  done && { color: colors.text, fontWeight: "700" },
-                ]}
-              >
-                {step.replace("_", " ")}
+        {history.length === 0 ? (
+          <Text style={{ color: colors.muted }}>No updates yet.</Text>
+        ) : (
+          history.map((h, i) => (
+            <View key={h.id} style={styles.tlRow}>
+              <View style={styles.tlLeft}>
+                <View
+                  style={[
+                    styles.tlDot,
+                    {
+                      backgroundColor:
+                        statusColor[h.new_status] || colors.primary,
+                    },
+                  ]}
+                />
+                {i < history.length - 1 && <View style={styles.tlLine} />}
+              </View>
+              <View style={styles.tlBody}>
+                <Text style={styles.tlStatus}>
+                  {h.new_status.replace("_", " ")}
+                </Text>
+                {h.note ? <Text style={styles.tlNote}>{h.note}</Text> : null}
+                <Text style={styles.tlDate}>
+                  {new Date(h.created_at).toLocaleString()}
+                  {h.changed_by_name ? ` • ${h.changed_by_name}` : ""}
+                </Text>
+              </View>
+            </View>
+          ))
+        )}
+      </View>
+
+      {/* Feedback: only after resolution */}
+      {isResolved && (
+        <View style={styles.feedbackCard}>
+          <Text style={styles.section}>
+            {hasFeedback ? "Your feedback" : "Rate the resolution"}
+          </Text>
+          {hasFeedback ? (
+            <View>
+              <Stars value={item.feedback_rating} size={28} />
+              {item.feedback_comment ? (
+                <Text style={styles.fbComment}>
+                  “{item.feedback_comment}”
+                </Text>
+              ) : null}
+              <Text style={styles.fbThanks}>
+                Thank you for helping improve city services! 🙏
               </Text>
             </View>
-          );
-        })}
-      </View>
+          ) : (
+            <View>
+              <Stars value={rating} onChange={setRating} />
+              <TextInput
+                style={styles.fbInput}
+                placeholder="Any comments? (optional)"
+                placeholderTextColor={colors.muted}
+                value={comment}
+                onChangeText={setComment}
+                multiline
+              />
+              <TouchableOpacity
+                style={styles.fbButton}
+                onPress={onSubmitFeedback}
+                disabled={sending}
+              >
+                {sending ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.fbButtonText}>Submit Feedback</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -143,6 +250,22 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 22, fontWeight: "800", color: colors.text, marginTop: 6 },
   desc: { color: colors.muted, marginTop: 8, lineHeight: 21, fontSize: 15 },
+  statusRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 16,
+  },
+  noteBox: {
+    backgroundColor: "#eff6ff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.primary + "44",
+    padding: 14,
+    marginTop: 16,
+  },
+  noteTitle: { fontWeight: "800", color: colors.primary, marginBottom: 4 },
+  noteText: { color: colors.text, lineHeight: 20 },
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -167,14 +290,39 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  tlRow: { flexDirection: "row", alignItems: "center", marginBottom: 14 },
-  tlDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+  tlRow: { flexDirection: "row" },
+  tlLeft: { alignItems: "center", marginRight: 14, width: 14 },
+  tlDot: { width: 14, height: 14, borderRadius: 7 },
+  tlLine: {
+    flex: 1,
+    width: 2,
     backgroundColor: colors.border,
-    marginRight: 14,
+    marginVertical: 2,
   },
-  tlDotActive: { transform: [{ scale: 1.3 }] },
-  tlLabel: { color: colors.muted, fontSize: 15 },
+  tlBody: { flex: 1, paddingBottom: 18 },
+  tlStatus: { fontWeight: "800", color: colors.text, fontSize: 15 },
+  tlNote: { color: colors.text, marginTop: 2, lineHeight: 19 },
+  tlDate: { color: colors.muted, fontSize: 12, marginTop: 4 },
+  feedbackCard: { marginBottom: 20 },
+  fbInput: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 14,
+    minHeight: 70,
+    textAlignVertical: "top",
+    color: colors.text,
+  },
+  fbButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 12,
+    padding: 14,
+    alignItems: "center",
+    marginTop: 12,
+  },
+  fbButtonText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  fbComment: { color: colors.text, marginTop: 10, fontStyle: "italic" },
+  fbThanks: { color: colors.muted, marginTop: 10 },
 });

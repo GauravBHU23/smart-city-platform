@@ -38,13 +38,29 @@ export default function ComplaintDetailPage() {
     setSaving(true);
     try {
       const updated = await fn();
-      setC(updated);
+      // Preserve history if the action response doesn't include it,
+      // then refresh to pull the new history entry.
+      setC((prev) => ({ ...prev, ...updated }));
       if (successMsg) toast.success(successMsg);
+      load();
     } catch (e) {
       toast.error(e.message);
     } finally {
       setSaving(false);
     }
+  }
+
+  function changeStatus(newStatus) {
+    // Ask for an optional note that the citizen will see.
+    const note = window.prompt(
+      "Add a note for the citizen (optional):\ne.g. \"Pothole repaired on 22 July\"",
+      ""
+    );
+    if (note === null) return; // cancelled
+    run(
+      () => api.updateStatus(c.id, newStatus, note.trim() || null),
+      `Status updated to ${newStatus.replace("_", " ")}`
+    );
   }
 
   if (error) return <p style={{ color: "var(--danger)" }}>{error}</p>;
@@ -106,6 +122,58 @@ export default function ComplaintDetailPage() {
             <Info label="🔄 Last updated">
               {new Date(c.updated_at).toLocaleString()}
             </Info>
+            {c.resolution_note && (
+              <Info label="📝 Note to citizen">{c.resolution_note}</Info>
+            )}
+          </div>
+
+          {/* Citizen feedback (after resolution) */}
+          {c.feedback_rating != null && (
+            <div className="card" style={{ marginTop: 16 }}>
+              <h3 style={styles.h3}>⭐ Citizen feedback</h3>
+              <div style={{ fontSize: 22 }}>
+                {"⭐".repeat(c.feedback_rating)}
+                {"☆".repeat(5 - c.feedback_rating)}
+                <span style={{ fontSize: 14, color: "var(--muted)", marginLeft: 8 }}>
+                  {c.feedback_rating}/5
+                </span>
+              </div>
+              {c.feedback_comment && (
+                <p style={{ marginTop: 8, fontStyle: "italic", color: "var(--text)" }}>
+                  “{c.feedback_comment}”
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Audit trail */}
+          <div className="card" style={{ marginTop: 16 }}>
+            <h3 style={styles.h3}>📜 Activity history</h3>
+            {(c.history || []).length === 0 ? (
+              <p style={{ color: "var(--muted)", fontSize: 14 }}>No activity yet.</p>
+            ) : (
+              c.history.map((h) => (
+                <div key={h.id} style={styles.histRow}>
+                  <span
+                    style={{
+                      ...styles.dot,
+                      background: statusColor[h.new_status] || "var(--primary)",
+                      marginTop: 4,
+                    }}
+                  />
+                  <div>
+                    <b style={{ fontSize: 14 }}>{h.new_status.replace("_", " ")}</b>
+                    {h.note && (
+                      <div style={{ fontSize: 13, marginTop: 2 }}>{h.note}</div>
+                    )}
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>
+                      {new Date(h.created_at).toLocaleString()}
+                      {h.changed_by_name ? ` • ${h.changed_by_name}` : ""}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -117,12 +185,7 @@ export default function ComplaintDetailPage() {
               className="select"
               value={c.status}
               disabled={saving}
-              onChange={(e) =>
-                run(
-                  () => api.updateStatus(c.id, e.target.value),
-                  `Status updated to ${e.target.value.replace("_", " ")}`
-                )
-              }
+              onChange={(e) => changeStatus(e.target.value)}
               style={{ width: "100%", color: statusColor[c.status], fontWeight: 700 }}
             >
               {STATUSES.map((s) => (
@@ -248,5 +311,11 @@ const styles = {
   },
   h3: { fontSize: 15, marginBottom: 10 },
   tlRow: { display: "flex", alignItems: "center", gap: 10, marginBottom: 10 },
+  histRow: {
+    display: "flex",
+    gap: 10,
+    padding: "10px 0",
+    borderTop: "1px solid var(--border)",
+  },
   dot: { width: 12, height: 12, borderRadius: "50%", flexShrink: 0 },
 };

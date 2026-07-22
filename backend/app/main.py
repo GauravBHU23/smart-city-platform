@@ -20,6 +20,27 @@ app = FastAPI(
 # (Fine for development. For production we'll switch to Alembic migrations.)
 Base.metadata.create_all(bind=engine)
 
+# Lightweight migration: add columns that create_all won't add to existing
+# tables. Safe to run repeatedly (checks information_schema first).
+def _ensure_columns():
+    from sqlalchemy import inspect
+
+    new_columns = {
+        "resolution_note": "TEXT",
+        "feedback_rating": "INTEGER",
+        "feedback_comment": "TEXT",
+    }
+    existing = {c["name"] for c in inspect(engine).get_columns("complaints")}
+    with engine.begin() as conn:
+        for col, sqltype in new_columns.items():
+            if col not in existing:
+                conn.execute(
+                    text(f"ALTER TABLE complaints ADD COLUMN {col} {sqltype}")
+                )
+
+
+_ensure_columns()
+
 # Allow the mobile app and admin panel (running on other origins) to call the API.
 # CORS_ORIGINS is "*" in dev; set it to your admin panel URL(s) in production.
 _origins = ["*"] if CORS_ORIGINS.strip() == "*" else [
